@@ -272,7 +272,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-         GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+         GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, sendPasswordResetEmail }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -378,15 +378,21 @@ window.handleEmailAuth = async () => {
       result = await createUserWithEmailAndPassword(auth, email, password);
     }
     await saveLoginLog(result.user);
+    // reset button on success (in case auth screen shows again)
+    btn.textContent = origText;
+    btn.disabled = false;
+    btn.style.opacity = "1";
   } catch(e) {
     const msgs = {
       "auth/user-not-found": "No account found. Register first.",
       "auth/wrong-password": "Wrong password. Try again.",
+      "auth/invalid-credential": "Wrong email or password. Try again.",
       "auth/email-already-in-use": "Email already registered. Sign in instead.",
       "auth/weak-password": "Password must be at least 6 characters.",
-      "auth/invalid-email": "Invalid email address."
+      "auth/invalid-email": "Invalid email address.",
+      "auth/network-request-failed": "Network error. Check your internet."
     };
-    errorEl.textContent = msgs[e.code] || e.message;
+    errorEl.textContent = msgs[e.code] || "Something went wrong. Try again.";
     btn.textContent = origText;
     btn.disabled = false;
     btn.style.opacity = "1";
@@ -409,15 +415,24 @@ window.handleGoogleAuth = async () => {
 window.handleForgotPassword = async () => {
   const email = document.getElementById("auth-email").value.trim();
   const errorEl = document.getElementById("auth-error");
-  if (!email) { errorEl.style.color = "var(--red)"; errorEl.textContent = "Enter your email above first."; return; }
+  if (!email) {
+    errorEl.style.color = "#ef4444";
+    errorEl.textContent = "Type your email in the box above first.";
+    return;
+  }
   try {
-    const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
     await sendPasswordResetEmail(auth, email);
     errorEl.style.color = "#34d399";
-    errorEl.textContent = "Reset email sent! Check your inbox.";
+    errorEl.textContent = "Reset link sent! Check your email inbox now.";
   } catch(e) {
-    errorEl.style.color = "var(--red)";
-    errorEl.textContent = "Could not send reset email. Check the email address.";
+    errorEl.style.color = "#ef4444";
+    if(e.code === "auth/user-not-found") {
+      errorEl.textContent = "No account found with this email.";
+    } else if(e.code === "auth/invalid-email") {
+      errorEl.textContent = "Invalid email address.";
+    } else {
+      errorEl.textContent = "Could not send reset email. Try again.";
+    }
   }
 };
 
@@ -430,9 +445,9 @@ window.handleLogout = () => signOut(auth);
 const quotes=["Every storm runs out of rain. You will too. 🌈","You are stronger than you think. 💪","Small steps every day lead to big changes. 🌱","It's okay to not be okay. Keep going. 💜","Your feelings are valid. Your healing is possible. ✨","Today is hard. Tomorrow might be better. Show up anyway. 🔥","You don't have to be perfect. Just be you. 💙","The darkest nights produce the brightest stars. ⭐","You've survived 100% of your bad days so far. 🌸","Be gentle with yourself. You're doing your best. 💗"];
 document.getElementById('quote-bar').textContent=`"${quotes[Math.floor(Math.random()*quotes.length)]}"`;
 const modePrompts={
-  sugar:"You are Meepro, the warmest most loving best friend inside 'Arise'. Reply in English only. Max 3 lines. You are like a loving mother, best friend and guardian angel combined. Use sweet, comforting words. Make them feel deeply loved, safe and understood. Always end with an uplifting line. Use 2 emojis. Never give helpline numbers unless asked.",
-  real:"You are Meepro, a balanced wise best friend inside 'Arise'. Reply in English only. Max 3 lines. You are a perfect mix — warm and caring but also honest and grounded. Never too soft, never too harsh. Give real perspective with kindness. If they need a push, give it gently. Never give helpline numbers unless asked.",
-  reality:"You are Meepro, a straight-talking life coach inside 'Arise'. Reply in English only. Max 4 lines. Be honest and direct but also deeply wise. Give one real life truth, one practical example or analogy, and one clear action they can take today. No sugarcoating but also no cruelty — speak like a mentor who truly believes in them. Never give helpline numbers unless asked."
+  sugar:"You are Meepro, a warm and deeply loving best friend inside the app Arise. Reply in English only. Keep it to 2-3 short lines maximum. Talk like a caring best friend or loving older sister — full of warmth, softness and genuine love. Use 1-2 emojis naturally. Make them feel completely safe, loved and never alone. Never give helpline numbers unless they ask.",
+  real:"You are Meepro, a kind but honest best friend inside the app Arise. Reply in English only. Keep it to 2-3 short lines maximum. You are like a smart older sibling — you care deeply but you also tell the truth gently. Never cold, never fake. Give real balanced advice. Use 1 emoji. Never give helpline numbers unless they ask.",
+  reality:"You are Meepro, a bold and honest life mentor inside the app Arise. Reply in English only. Keep it to 3-4 short lines maximum. Be direct and real — no sugarcoating. Give one honest truth, one short real-life example, and one clear thing they can do right now. Speak firmly but with care — like a coach who truly believes in them. No emojis. Never give helpline numbers unless they ask."
 };
 window.chatHistories={sugar:[],real:[],reality:[]};
 window.selectedMoods={sugar:'',real:'',reality:''};
@@ -471,23 +486,22 @@ async function loadChallenges(){
   const list=document.getElementById('challenges-list');
   list.innerHTML=`<div class="empty-state"><div class="big">⏳</div>Generating...</div>`;
   try{
-    const ageGroup = age<=12 ? "child (age "+age+")" : age<=17 ? "teenager (age "+age+")" : age<=25 ? "young adult (age "+age+")" : age<=40 ? "adult (age "+age+")" : "mature adult (age "+age+")";
-    const challengePrompt = `You are a world-class life coach and mental health expert. Generate exactly 5 powerful daily challenges for a ${ageGroup}. 
-
-Rules:
-- Tasks must be 100% realistic and doable TODAY for this exact age group
-- For children (5-12): fun, simple, family/school focused tasks like "draw how you feel today" or "say one kind thing to a friend"
-- For teenagers (13-17): social, academic, self-growth tasks like "write 3 things you like about yourself" or "put phone away for 1 hour and read"
-- For young adults (18-25): career, habits, independence tasks like "wake up 30 mins earlier and plan your day" or "reach out to one person you've been avoiding"
-- For adults (26-40): work-life balance, relationships, health tasks like "take a 20 min walk without your phone" or "tell someone you love them today"
-- For mature adults (41+): wisdom, health, gratitude tasks like "write a letter to your younger self" or "spend 10 mins stretching and breathing"
-- Each task must have a powerful one-line motivation WHY this task matters for their life
-- NO generic useless tasks like "drink water" or "sleep early" — every task must feel personal and impactful
-- Return ONLY a JSON array, no extra text:
-[{"icon":"emoji","task":"Specific actionable task for this age","motivation":"One powerful sentence why this changes their life"}]`;
-    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:challengePrompt}]})});
+    const ageGroup = age<=12?"child":age<=17?"teenager":age<=25?"young adult":age<=40?"adult":"senior adult";
+    const examples = {
+      "child": '{"icon":"🎨","task":"Draw a picture of your happiest memory today","motivation":"Expressing emotions through art builds emotional intelligence that lasts a lifetime."}',
+      "teenager": '{"icon":"📓","task":"Write 3 things you genuinely like about yourself right now","motivation":"Self-awareness at your age shapes your confidence for the next 20 years."}',
+      "young adult": '{"icon":"⏰","task":"Wake up 30 minutes earlier tomorrow and write your top 3 goals","motivation":"The most successful people in the world own their mornings — this is how it starts."}',
+      "adult": '{"icon":"📵","task":"Take a 20 minute walk today with your phone left at home","motivation":"Disconnecting even once a day resets your mind and dramatically reduces stress hormones."}',
+      "senior adult": '{"icon":"✍️","task":"Write one page about the most important lesson your life has taught you","motivation":"Your wisdom is irreplaceable — writing it down gives it permanence and brings you peace."}'
+    };
+    const challengePrompt = "You are a life coach. Generate exactly 5 daily challenges for a "+age+"-year-old "+ageGroup+". Make each task specific, realistic, and doable today. Not generic. Each must have a powerful motivation line. Return ONLY a valid JSON array with no extra text, no markdown, no backticks. Format: [{"icon":"emoji","task":"specific task","motivation":"why this matters"}]. Example of one item: "+examples[ageGroup];
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:"You are a life coach. Return ONLY valid JSON arrays. No markdown. No explanation. No backticks."},{role:'user',content:challengePrompt}]})});
     const data=await res.json();
-    const raw=(data.reply||'[]').replace(/```json|```/g,'').trim();
+    let raw=(data.reply||'[]').trim();
+    raw=raw.replace(/```json/g,'').replace(/```/g,'').trim();
+    // extract JSON array if extra text exists
+    const match=raw.match(/\[[\s\S]*\]/);
+    raw=match?match[0]:'[]';
     const challenges=JSON.parse(raw);
     list.innerHTML='';
     challenges.forEach(c=>{
