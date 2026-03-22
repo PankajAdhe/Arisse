@@ -114,6 +114,9 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
 .diary-entry{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:14px;}
 .diary-entry .entry-date{font-size:0.7rem;color:var(--gold);font-weight:600;margin-bottom:6px;}
 .diary-entry .entry-text{font-size:0.85rem;color:#cbd5e1;line-height:1.6;}
+.diary-entry{position:relative;}
+.delete-entry-btn{position:absolute;top:10px;right:10px;background:none;border:1px solid #ef444430;color:#ef4444;border-radius:6px;padding:2px 8px;font-size:0.7rem;cursor:pointer;opacity:0.6;transition:opacity 0.2s;}
+.delete-entry-btn:hover{opacity:1;}
 .diary-write{background:var(--surface);border-radius:16px;padding:16px;border:1px solid #fbbf2430;}
 .diary-write textarea{width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.85rem;resize:none;outline:none;height:100px;line-height:1.6;margin-bottom:10px;}
 .diary-write textarea::placeholder{color:var(--muted);}
@@ -141,6 +144,9 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
     <input type="password" id="auth-password" class="auth-input" placeholder="Password"/>
 
     <button class="btn-auth btn-purple" id="auth-submit-btn" onclick="handleEmailAuth()">Sign In</button>
+    <div style="text-align:center;margin-bottom:8px;">
+      <span onclick="handleForgotPassword()" style="font-size:0.75rem;color:var(--muted);cursor:pointer;text-decoration:underline;">Forgot password?</span>
+    </div>
 
     <div class="auth-divider">or</div>
 
@@ -268,7 +274,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
          GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, collection, addDoc, serverTimestamp }
+import { getFirestore, doc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -319,8 +325,23 @@ function showApp(user) {
 
 // Watch auth state
 onAuthStateChanged(auth, (user) => {
-  if (user) showApp(user);
-  else {
+  if (user) {
+    window.currentUser = user;
+    showApp(user);
+    window.chatHistories = {sugar:[],real:[],reality:[]};
+    window.selectedMoods = {sugar:"",real:"",reality:""};
+    ["sugar","real","reality"].forEach(function(mode) {
+      var box = document.getElementById("chat-" + mode);
+      if(!box) return;
+      var msgs = {
+        sugar: "<div class=\"msg bot\"><div class=\"sender\" style=\"color:#f472b6\">Meepro 💗</div>Hey my love! I\'m so happy you\'re here. Talk to me? 💕</div>",
+        real: "<div class=\"msg bot\"><div class=\"sender\" style=\"color:#60a5fa\">Meepro 💙</div>Hey, I\'m Meepro. Kind but honest. What\'s going on?</div>",
+        reality: "<div class=\"msg bot\"><div class=\"sender\" style=\"color:#ef4444\">Meepro 🔥</div>Pure reality. No sugarcoating. What\'s happening?</div>"
+      };
+      box.innerHTML = msgs[mode];
+    });
+  } else {
+    window.currentUser = null;
     document.getElementById("auth-screen").style.display = "flex";
     document.getElementById("main-app").style.display = "none";
     document.getElementById("user-bar").style.display = "none";
@@ -342,8 +363,13 @@ window.handleEmailAuth = async () => {
   const email = document.getElementById("auth-email").value.trim();
   const password = document.getElementById("auth-password").value;
   const errorEl = document.getElementById("auth-error");
+  const btn = document.getElementById("auth-submit-btn");
   errorEl.textContent = "";
   if (!email || !password) { errorEl.textContent = "Please fill in both fields."; return; }
+  const origText = btn.textContent;
+  btn.textContent = "Please wait...";
+  btn.disabled = true;
+  btn.style.opacity = "0.7";
   try {
     let result;
     if (window.currentAuthMode === "login") {
@@ -361,6 +387,9 @@ window.handleEmailAuth = async () => {
       "auth/invalid-email": "Invalid email address."
     };
     errorEl.textContent = msgs[e.code] || e.message;
+    btn.textContent = origText;
+    btn.disabled = false;
+    btn.style.opacity = "1";
   }
 };
 
@@ -376,6 +405,22 @@ window.handleGoogleAuth = async () => {
   }
 };
 
+// Forgot password
+window.handleForgotPassword = async () => {
+  const email = document.getElementById("auth-email").value.trim();
+  const errorEl = document.getElementById("auth-error");
+  if (!email) { errorEl.style.color = "var(--red)"; errorEl.textContent = "Enter your email above first."; return; }
+  try {
+    const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    await sendPasswordResetEmail(auth, email);
+    errorEl.style.color = "#34d399";
+    errorEl.textContent = "Reset email sent! Check your inbox.";
+  } catch(e) {
+    errorEl.style.color = "var(--red)";
+    errorEl.textContent = "Could not send reset email. Check the email address.";
+  }
+};
+
 // Logout
 window.handleLogout = () => signOut(auth);
 </script>
@@ -385,28 +430,28 @@ window.handleLogout = () => signOut(auth);
 const quotes=["Every storm runs out of rain. You will too. 🌈","You are stronger than you think. 💪","Small steps every day lead to big changes. 🌱","It's okay to not be okay. Keep going. 💜","Your feelings are valid. Your healing is possible. ✨","Today is hard. Tomorrow might be better. Show up anyway. 🔥","You don't have to be perfect. Just be you. 💙","The darkest nights produce the brightest stars. ⭐","You've survived 100% of your bad days so far. 🌸","Be gentle with yourself. You're doing your best. 💗"];
 document.getElementById('quote-bar').textContent=`"${quotes[Math.floor(Math.random()*quotes.length)]}"`;
 const modePrompts={
-  sugar:"You are Meepro, a warm loving best friend inside 'Arise'. Reply in English only. Max 3 lines. Short and warm. Talk like a loving mother or best friend. Never give helpline numbers unless asked. Use 1-2 emojis. Make them feel loved and less alone.",
-  real:"You are Meepro, a wise honest best friend inside 'Arise'. Reply in English only. Max 3 lines. Like a smart older sibling — honest but never cold. Never give helpline numbers unless asked.",
-  reality:"You are Meepro, brutally honest best friend inside 'Arise'. Zero sugarcoating. Reply in English only. Max 4 lines. Like a strict teacher who truly cares. Never give helpline numbers unless asked."
+  sugar:"You are Meepro, the warmest most loving best friend inside 'Arise'. Reply in English only. Max 3 lines. You are like a loving mother, best friend and guardian angel combined. Use sweet, comforting words. Make them feel deeply loved, safe and understood. Always end with an uplifting line. Use 2 emojis. Never give helpline numbers unless asked.",
+  real:"You are Meepro, a balanced wise best friend inside 'Arise'. Reply in English only. Max 3 lines. You are a perfect mix — warm and caring but also honest and grounded. Never too soft, never too harsh. Give real perspective with kindness. If they need a push, give it gently. Never give helpline numbers unless asked.",
+  reality:"You are Meepro, a straight-talking life coach inside 'Arise'. Reply in English only. Max 4 lines. Be honest and direct but also deeply wise. Give one real life truth, one practical example or analogy, and one clear action they can take today. No sugarcoating but also no cruelty — speak like a mentor who truly believes in them. Never give helpline numbers unless asked."
 };
-const chatHistories={sugar:[],real:[],reality:[]};
-const selectedMoods={sugar:'',real:'',reality:''};
-function selectMood(mode,mood,btn){selectedMoods[mode]=mood;btn.closest('.mood-row').querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
+window.chatHistories={sugar:[],real:[],reality:[]};
+window.selectedMoods={sugar:'',real:'',reality:''};
+function selectMood(mode,mood,btn){window.selectedMoods[mode]=mood;btn.closest('.mood-row').querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
 async function sendMessage(mode){
   const input=document.getElementById(`input-${mode}`);
   const chatBox=document.getElementById(`chat-${mode}`);
   const userText=input.value.trim();
   if(!userText)return;
-  const moodInfo=selectedMoods[mode]?` [User mood: ${selectedMoods[mode]}]`:'';
+  const moodInfo=window.selectedMoods[mode]?` [User mood: ${window.selectedMoods[mode]}]`:'';
   addMsg(chatBox,userText,'user');
   input.value='';
   const thinking=addMsg(chatBox,'Meepro is thinking... 💭','thinking');
-  chatHistories[mode].push({role:"user",content:userText+moodInfo});
+  window.chatHistories[mode].push({role:"user",content:userText+moodInfo});
   try{
-    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:modePrompts[mode]},...chatHistories[mode]]})});
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:modePrompts[mode]},...window.chatHistories[mode]]})});
     const data=await res.json();
     const reply=data.reply||"I'm here for you 💜 Try again!";
-    chatHistories[mode].push({role:'assistant',content:reply});
+    window.chatHistories[mode].push({role:'assistant',content:reply});
     thinking.remove();
     const icons={sugar:'💗',real:'💙',reality:'🔥'};
     const colors={sugar:'#f472b6',real:'#60a5fa',reality:'#ef4444'};
@@ -426,12 +471,31 @@ async function loadChallenges(){
   const list=document.getElementById('challenges-list');
   list.innerHTML=`<div class="empty-state"><div class="big">⏳</div>Generating...</div>`;
   try{
-    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:`Generate exactly 5 age-appropriate daily challenges for a ${age}-year-old to improve mental health. Return ONLY JSON array: [{"icon":"🌅","task":"Short task"}]. No extra text.`}]})});
+    const ageGroup = age<=12 ? "child (age "+age+")" : age<=17 ? "teenager (age "+age+")" : age<=25 ? "young adult (age "+age+")" : age<=40 ? "adult (age "+age+")" : "mature adult (age "+age+")";
+    const challengePrompt = `You are a world-class life coach and mental health expert. Generate exactly 5 powerful daily challenges for a ${ageGroup}. 
+
+Rules:
+- Tasks must be 100% realistic and doable TODAY for this exact age group
+- For children (5-12): fun, simple, family/school focused tasks like "draw how you feel today" or "say one kind thing to a friend"
+- For teenagers (13-17): social, academic, self-growth tasks like "write 3 things you like about yourself" or "put phone away for 1 hour and read"
+- For young adults (18-25): career, habits, independence tasks like "wake up 30 mins earlier and plan your day" or "reach out to one person you've been avoiding"
+- For adults (26-40): work-life balance, relationships, health tasks like "take a 20 min walk without your phone" or "tell someone you love them today"
+- For mature adults (41+): wisdom, health, gratitude tasks like "write a letter to your younger self" or "spend 10 mins stretching and breathing"
+- Each task must have a powerful one-line motivation WHY this task matters for their life
+- NO generic useless tasks like "drink water" or "sleep early" — every task must feel personal and impactful
+- Return ONLY a JSON array, no extra text:
+[{"icon":"emoji","task":"Specific actionable task for this age","motivation":"One powerful sentence why this changes their life"}]`;
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:challengePrompt}]})});
     const data=await res.json();
     const raw=(data.reply||'[]').replace(/```json|```/g,'').trim();
     const challenges=JSON.parse(raw);
     list.innerHTML='';
-    challenges.forEach(c=>{const item=document.createElement('div');item.className='challenge-item';item.innerHTML=`<div class="icon">${c.icon}</div><div class="text">${c.task}</div><button class="check-btn" onclick="toggleCheck(this)"></button>`;list.appendChild(item);});
+    challenges.forEach(c=>{
+      const item=document.createElement('div');
+      item.className='challenge-item';
+      item.innerHTML=`<div class="icon">${c.icon}</div><div class="text"><div style="font-weight:600;margin-bottom:4px;">${c.task}</div><div style="font-size:0.75rem;color:#34d399;margin-top:2px;">✦ ${c.motivation||''}</div></div><button class="check-btn" onclick="toggleCheck(this)"></button>`;
+      list.appendChild(item);
+    });
   }catch(e){list.innerHTML=`<div class="empty-state"><div class="big">😔</div>Could not load. Try again.</div>`;}
 }
 function toggleCheck(btn){btn.classList.toggle('done');btn.textContent=btn.classList.contains('done')?'✓':'';}
@@ -440,19 +504,25 @@ function unlockDiary(){
   const input=document.getElementById('diary-password-input').value.trim();
   const errorEl=document.getElementById('diary-error');
   if(!input){errorEl.textContent="Please enter a password!";return;}
-  const savedPass=localStorage.getItem('arise_diary_pass');
-  if(!savedPass){localStorage.setItem('arise_diary_pass',input);diaryPassword=input;errorEl.textContent='';openDiary();}
+  const savedPass=localStorage.getItem('arise_diary_pass_'+(window.currentUser?window.currentUser.uid:'guest'));
+  if(!savedPass){localStorage.setItem('arise_diary_pass_'+(window.currentUser?window.currentUser.uid:'guest'),input);diaryPassword=input;errorEl.textContent='';openDiary();}
   else if(input===savedPass){diaryPassword=input;errorEl.textContent='';openDiary();}
   else{errorEl.textContent='Wrong password! Try again. 🔐';document.getElementById('diary-password-input').value='';}
 }
 function openDiary(){document.getElementById('diary-lock').style.display='none';document.getElementById('diary-content').style.display='block';loadDiaryEntries();}
 function lockDiary(){diaryPassword=null;document.getElementById('diary-lock').style.display='block';document.getElementById('diary-content').style.display='none';document.getElementById('diary-password-input').value='';document.getElementById('diary-error').textContent='';}
-function loadDiaryEntries(){const saved=localStorage.getItem('arise_diary_entries');diaryEntries=saved?JSON.parse(saved):[];renderEntries();}
+function loadDiaryEntries(){const saved=localStorage.getItem('arise_diary_entries_'+(window.currentUser?window.currentUser.uid:'guest'));diaryEntries=saved?JSON.parse(saved):[];renderEntries();}
 function renderEntries(){
   const container=document.getElementById('diary-entries');
   if(diaryEntries.length===0){container.innerHTML=`<div class="empty-state"><div class="big">📖</div>No entries yet!</div>`;return;}
   container.innerHTML='';
-  [...diaryEntries].reverse().forEach(entry=>{const div=document.createElement('div');div.className='diary-entry';div.innerHTML=`<div class="entry-date">📅 ${entry.date}</div><div class="entry-text">${entry.text}</div>`;container.appendChild(div);});
+  [...diaryEntries].reverse().forEach((entry,i)=>{
+    const realIndex=diaryEntries.length-1-i;
+    const div=document.createElement('div');
+    div.className='diary-entry';
+    div.innerHTML=`<button class="delete-entry-btn" onclick="deleteDiaryEntry(${realIndex})">Delete</button><div class="entry-date">📅 ${entry.date}</div><div class="entry-text">${entry.text}</div>`;
+    container.appendChild(div);
+  });
 }
 function saveDiaryEntry(){
   const text=document.getElementById('diary-text').value.trim();
@@ -461,13 +531,18 @@ function saveDiaryEntry(){
   const date=now.toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const time=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   diaryEntries.push({date:`${date} at ${time}`,text});
-  localStorage.setItem('arise_diary_entries',JSON.stringify(diaryEntries));
+  localStorage.setItem('arise_diary_entries_'+(window.currentUser?window.currentUser.uid:'guest'),JSON.stringify(diaryEntries));
   document.getElementById('diary-text').value='';
+  renderEntries();
+}
+function deleteDiaryEntry(index){
+  if(!confirm('Delete this entry?'))return;
+  const uid=window.currentUser?window.currentUser.uid:'guest';
+  diaryEntries.splice(index,1);
+  localStorage.setItem('arise_diary_entries_'+uid,JSON.stringify(diaryEntries));
   renderEntries();
 }
 document.getElementById('diary-password-input').addEventListener('keydown',e=>{if(e.key==='Enter')unlockDiary();});
 </script>
 </body>
 </html>
-
-
