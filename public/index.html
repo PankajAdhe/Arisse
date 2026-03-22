@@ -1,1 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Arise – Meepro</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--bg:#060612;--surface:#0d0d1f;--surface2:#13132a;--border:#ffffff12;--border2:#ffffff20;--text:#e2e8f0;--muted:#64748b;--purple:#a78bfa;--blue:#60a5fa;--pink:#f472b6;--green:#34d399;--orange:#f97316;--red:#ef4444;--gold:#fbbf24;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 20% 20%,#a78bfa08 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,#60a5fa08 0%,transparent 50%);pointer-events:none;z-index:0;}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+#auth-screen::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 30% 30%,#a78bfa10 0%,transparent 50%),radial-gradient(ellipse at 70% 70%,#60a5fa10 0%,transparent 50%);pointer-events:none;}
+.auth-card{background:var(--surface);border:1px solid var(--border2);border-radius:24px;padding:40px 36px;width:100%;max-width:420px;position:relative;z-index:1;}
+.auth-logo{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6,#a78bfa);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gradientShift 4s ease infinite;letter-spacing:3px;text-align:center;margin-bottom:6px;}
+.auth-sub{text-align:center;font-size:0.78rem;color:var(--muted);margin-bottom:28px;letter-spacing:0.5px;}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;background:var(--surface2);border-radius:12px;padding:4px;}
+.auth-tab{flex:1;padding:8px;border:none;background:none;color:var(--muted);font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;border-radius:9px;transition:all 0.2s;}
+.auth-tab.active{background:linear-gradient(135deg,#a78bfa,#818cf8);color:#fff;}
+.auth-input{width:100%;padding:13px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;outline:none;margin-bottom:12px;transition:border 0.2s;}
+.auth-input:focus{border-color:var(--purple);}
+.auth-input::placeholder{color:var(--muted);}
+.btn-auth{width:100%;padding:13px;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-weight:600;font-size:0.88rem;cursor:pointer;transition:all 0.2s;margin-bottom:10px;}
+.btn-purple{background:linear-gradient(135deg,#a78bfa,#818cf8);color:#fff;box-shadow:0 4px 20px rgba(167,139,250,0.3);}
+.btn-purple:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(167,139,250,0.4);}
+.btn-google{background:var(--surface2);color:var(--text);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:10px;}
+.btn-google:hover{border-color:var(--purple);background:#ffffff08;}
+.google-icon{width:18px;height:18px;}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:14px 0;color:var(--muted);font-size:0.75rem;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-error{color:var(--red);font-size:0.78rem;text-align:center;margin-bottom:10px;min-height:18px;}
+.auth-loading{color:var(--purple);font-size:0.78rem;text-align:center;margin-bottom:10px;}
+
+/* ── USER BAR (top right when logged in) ── */
+#user-bar{position:fixed;top:12px;right:16px;z-index:50;display:none;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border2);border-radius:50px;padding:6px 14px 6px 8px;}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#60a5fa);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+.user-avatar img{width:100%;height:100%;object-fit:cover;}
+.user-name{font-size:0.75rem;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-logout{padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:none;color:var(--muted);font-family:'Inter',sans-serif;font-size:0.7rem;cursor:pointer;transition:all 0.2s;}
+.btn-logout:hover{border-color:var(--red);color:var(--red);}
+
+/* ── REST OF APP (unchanged) ── */
+.header{position:relative;text-align:center;padding:40px 20px 20px;z-index:1;}
+.logo{font-family:'Space Grotesk',sans-serif;font-size:3rem;font-weight:700;background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6,#a78bfa);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gradientShift 4s ease infinite;letter-spacing:4px;}
+@keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.tagline{font-size:0.82rem;color:var(--muted);margin-top:6px;letter-spacing:1px;}
+.tagline span{color:var(--purple);font-weight:600;}
+.quote-bar{position:relative;z-index:1;text-align:center;padding:10px 40px;font-size:0.78rem;color:#818cf8;font-style:italic;border-bottom:1px solid var(--border);}
+.tabs{position:relative;z-index:1;display:flex;justify-content:center;gap:6px;padding:14px 20px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+.tab-btn{padding:8px 18px;border-radius:50px;border:1px solid var(--border2);cursor:pointer;font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:500;transition:all 0.3s;background:var(--surface);color:var(--muted);}
+.tab-btn:hover{color:var(--text);border-color:var(--purple);}
+.tab-btn.active{color:#fff;border-color:transparent;transform:scale(1.05);}
+.tab-btn[data-tab="sugar"].active{background:linear-gradient(135deg,#f472b6,#fb7185);box-shadow:0 0 20px rgba(244,114,182,0.4);}
+.tab-btn[data-tab="real"].active{background:linear-gradient(135deg,#60a5fa,#818cf8);box-shadow:0 0 20px rgba(96,165,250,0.4);}
+.tab-btn[data-tab="reality"].active{background:linear-gradient(135deg,#f97316,#ef4444);box-shadow:0 0 20px rgba(249,115,22,0.4);}
+.tab-btn[data-tab="challenge"].active{background:linear-gradient(135deg,#34d399,#10b981);box-shadow:0 0 20px rgba(52,211,153,0.4);}
+.tab-btn[data-tab="diary"].active{background:linear-gradient(135deg,#fbbf24,#f59e0b);box-shadow:0 0 20px rgba(251,191,36,0.4);}
+.panel{display:none;padding:24px 20px;max-width:720px;margin:0 auto;position:relative;z-index:1;}
+.panel.active{display:block;animation:panelIn 0.3s ease;}
+@keyframes panelIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.mode-badge{text-align:center;margin-bottom:14px;}
+.mode-badge span{padding:6px 20px;border-radius:50px;font-size:0.75rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;}
+.sugar-badge{background:#f472b215;color:#f472b6;border:1px solid #f472b630;}
+.real-badge{background:#60a5fa15;color:#60a5fa;border:1px solid #60a5fa30;}
+.reality-badge{background:#ef444415;color:#ef4444;border:1px solid #ef444430;}
+.mood-row{display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;}
+.mood-btn{padding:7px 16px;border-radius:50px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);cursor:pointer;font-size:0.78rem;font-family:'Inter',sans-serif;transition:all 0.2s;}
+.mood-btn.selected{background:linear-gradient(135deg,#a78bfa20,#818cf820);border-color:var(--purple);color:var(--purple);}
+.chat-box{background:var(--surface);border-radius:20px;padding:20px;min-height:300px;max-height:360px;overflow-y:auto;margin-bottom:14px;border:1px solid var(--border);display:flex;flex-direction:column;gap:14px;}
+.chat-box::-webkit-scrollbar{width:3px;}
+.chat-box::-webkit-scrollbar-thumb{background:#ffffff15;border-radius:3px;}
+.msg{padding:12px 16px;border-radius:16px;font-size:0.88rem;line-height:1.7;max-width:82%;animation:msgIn 0.3s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{background:linear-gradient(135deg,#a78bfa20,#818cf815);border:1px solid #a78bfa25;align-self:flex-end;color:var(--text);}
+.msg.bot{background:var(--surface2);border:1px solid var(--border);align-self:flex-start;color:#cbd5e1;}
+.msg.bot .sender{font-size:0.7rem;font-weight:700;margin-bottom:6px;letter-spacing:0.5px;}
+.msg.thinking{background:var(--surface2);border:1px solid var(--border);align-self:flex-start;color:var(--muted);font-style:italic;font-size:0.82rem;}
+.input-row{display:flex;gap:10px;align-items:flex-end;}
+.input-row textarea{flex:1;padding:14px 18px;background:var(--surface);border:1px solid var(--border2);border-radius:16px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;resize:none;outline:none;min-height:50px;max-height:120px;transition:border 0.3s;}
+.input-row textarea:focus{border-color:var(--purple);}
+.input-row textarea::placeholder{color:var(--muted);}
+.send-btn{width:50px;height:50px;border-radius:16px;border:none;cursor:pointer;font-size:1.2rem;transition:all 0.2s;flex-shrink:0;}
+.send-btn:hover{transform:scale(1.1);}
+.sugar-send{background:linear-gradient(135deg,#f472b6,#fb7185);box-shadow:0 4px 15px rgba(244,114,182,0.4);}
+.real-send{background:linear-gradient(135deg,#60a5fa,#818cf8);box-shadow:0 4px 15px rgba(96,165,250,0.4);}
+.reality-send{background:linear-gradient(135deg,#f97316,#ef4444);box-shadow:0 4px 15px rgba(249,115,22,0.4);}
+.card{background:var(--surface);border-radius:20px;padding:24px;border:1px solid var(--border);margin-bottom:20px;}
+.card h3{font-size:1rem;font-weight:700;margin-bottom:20px;}
+.green-title{color:var(--green);}
+.age-row{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+.age-row input{width:100px;padding:10px 14px;background:var(--bg);border:1px solid #34d39940;border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.9rem;outline:none;}
+.btn-green{padding:10px 24px;background:linear-gradient(135deg,#34d399,#10b981);border:none;border-radius:12px;color:#fff;font-family:'Inter',sans-serif;font-weight:600;cursor:pointer;font-size:0.85rem;transition:all 0.2s;}
+.challenges-list{display:flex;flex-direction:column;gap:10px;}
+.challenge-item{display:flex;align-items:flex-start;gap:12px;background:var(--surface2);border-radius:14px;padding:14px;border:1px solid var(--border);}
+.challenge-item .icon{font-size:1.4rem;flex-shrink:0;}
+.challenge-item .text{font-size:0.85rem;color:#cbd5e1;line-height:1.5;flex:1;}
+.check-btn{width:28px;height:28px;border-radius:50%;border:2px solid #34d39950;background:none;cursor:pointer;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:transparent;}
+.check-btn.done{background:var(--green);border-color:var(--green);color:#fff;}
+.diary-lock{text-align:center;padding:40px 20px;}
+.diary-lock .lock-icon{font-size:3rem;margin-bottom:16px;}
+.diary-lock h3{font-size:1.1rem;font-weight:700;color:var(--gold);margin-bottom:8px;}
+.diary-lock p{font-size:0.82rem;color:var(--muted);margin-bottom:24px;}
+.lock-input{width:100%;max-width:300px;padding:14px 18px;background:var(--surface);border:1px solid #fbbf2440;border-radius:14px;color:var(--text);font-family:'Inter',sans-serif;font-size:1rem;outline:none;text-align:center;letter-spacing:4px;margin-bottom:12px;}
+.lock-input:focus{border-color:var(--gold);}
+.btn-gold{padding:12px 32px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:12px;color:#0f0f1a;font-family:'Inter',sans-serif;font-weight:700;cursor:pointer;font-size:0.88rem;transition:all 0.2s;}
+.diary-content{display:none;}
+.diary-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.diary-header h3{font-size:1rem;font-weight:700;color:var(--gold);}
+.btn-sm{padding:6px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:'Inter',sans-serif;font-size:0.75rem;cursor:pointer;}
+.diary-entries{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;max-height:260px;overflow-y:auto;}
+.diary-entry{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.diary-entry .entry-date{font-size:0.7rem;color:var(--gold);font-weight:600;margin-bottom:6px;}
+.diary-entry .entry-text{font-size:0.85rem;color:#cbd5e1;line-height:1.6;}
+.diary-write{background:var(--surface);border-radius:16px;padding:16px;border:1px solid #fbbf2430;}
+.diary-write textarea{width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.85rem;resize:none;outline:none;height:100px;line-height:1.6;margin-bottom:10px;}
+.diary-write textarea::placeholder{color:var(--muted);}
+.empty-state{text-align:center;color:var(--muted);font-size:0.85rem;padding:40px 20px;}
+.empty-state .big{font-size:2.5rem;margin-bottom:10px;}
+.error-msg{color:var(--red);font-size:0.78rem;margin-top:6px;}
+</style>
+</head>
+<body>
+
+<!-- ── AUTH SCREEN ── -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">✦ ARISE</div>
+    <div class="auth-sub">Your safe space. Sign in to continue 💜</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login',this)">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('register',this)">Register</button>
+    </div>
+
+    <div id="auth-error" class="auth-error"></div>
+
+    <input type="email" id="auth-email" class="auth-input" placeholder="Email address"/>
+    <input type="password" id="auth-password" class="auth-input" placeholder="Password"/>
+
+    <button class="btn-auth btn-purple" id="auth-submit-btn" onclick="handleEmailAuth()">Sign In</button>
+
+    <div class="auth-divider">or</div>
+
+    <button class="btn-auth btn-google" onclick="handleGoogleAuth()">
+      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continue with Google
+    </button>
+  </div>
+</div>
+
+<!-- ── USER BAR ── -->
+<div id="user-bar">
+  <div class="user-avatar" id="user-avatar">?</div>
+  <span class="user-name" id="user-name">User</span>
+  <button class="btn-logout" onclick="handleLogout()">Logout</button>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="main-app" style="display:none;">
+  <div class="header">
+    <div class="logo">✦ ARISE</div>
+    <div class="tagline">Your AI companion <span>Meepro</span> is always here 💜</div>
+  </div>
+  <div class="quote-bar" id="quote-bar"></div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="sugar">🍬 Sugar</button>
+    <button class="tab-btn" data-tab="real">⚖️ Real</button>
+    <button class="tab-btn" data-tab="reality">💊 Reality</button>
+    <button class="tab-btn" data-tab="challenge">📅 Challenge</button>
+    <button class="tab-btn" data-tab="diary">🔒 Diary</button>
+  </div>
+  <div class="panel active" id="panel-sugar">
+    <div class="mode-badge"><span class="sugar-badge">🍬 SUGAR MODE — Pure Love & Warmth</span></div>
+    <div class="mood-row">
+      <button class="mood-btn" onclick="selectMood('sugar','😊 Happy',this)">😊 Happy</button>
+      <button class="mood-btn" onclick="selectMood('sugar','😢 Sad',this)">😢 Sad</button>
+      <button class="mood-btn" onclick="selectMood('sugar','😤 Angry',this)">😤 Angry</button>
+      <button class="mood-btn" onclick="selectMood('sugar','😰 Anxious',this)">😰 Anxious</button>
+      <button class="mood-btn" onclick="selectMood('sugar','😔 Lonely',this)">😔 Lonely</button>
+    </div>
+    <div class="chat-box" id="chat-sugar">
+      <div class="msg bot"><div class="sender" style="color:#f472b6">Meepro 💗</div>Hey my love! 🌸 I'm so happy you're here. Whatever you're carrying today, you don't have to carry it alone. Talk to me? 💕</div>
+    </div>
+    <div class="input-row">
+      <textarea id="input-sugar" placeholder="Talk to Meepro... 💬" rows="1"></textarea>
+      <button class="send-btn sugar-send" onclick="sendMessage('sugar')">💗</button>
+    </div>
+  </div>
+  <div class="panel" id="panel-real">
+    <div class="mode-badge"><span class="real-badge">⚖️ REAL MODE — Honest & Balanced</span></div>
+    <div class="mood-row">
+      <button class="mood-btn" onclick="selectMood('real','😊 Happy',this)">😊 Happy</button>
+      <button class="mood-btn" onclick="selectMood('real','😢 Sad',this)">😢 Sad</button>
+      <button class="mood-btn" onclick="selectMood('real','😤 Angry',this)">😤 Angry</button>
+      <button class="mood-btn" onclick="selectMood('real','😰 Anxious',this)">😰 Anxious</button>
+      <button class="mood-btn" onclick="selectMood('real','😔 Lonely',this)">😔 Lonely</button>
+    </div>
+    <div class="chat-box" id="chat-real">
+      <div class="msg bot"><div class="sender" style="color:#60a5fa">Meepro 💙</div>Hey, I'm Meepro. Kind but honest. No fake comfort. What's going on?</div>
+    </div>
+    <div class="input-row">
+      <textarea id="input-real" placeholder="What's on your mind?" rows="1"></textarea>
+      <button class="send-btn real-send" onclick="sendMessage('real')">💙</button>
+    </div>
+  </div>
+  <div class="panel" id="panel-reality">
+    <div class="mode-badge"><span class="reality-badge">💊 REALITY MODE — Zero Sugarcoating</span></div>
+    <div class="mood-row">
+      <button class="mood-btn" onclick="selectMood('reality','😊 Happy',this)">😊 Happy</button>
+      <button class="mood-btn" onclick="selectMood('reality','😢 Sad',this)">😢 Sad</button>
+      <button class="mood-btn" onclick="selectMood('reality','😤 Angry',this)">😤 Angry</button>
+      <button class="mood-btn" onclick="selectMood('reality','😰 Anxious',this)">😰 Anxious</button>
+      <button class="mood-btn" onclick="selectMood('reality','😔 Lonely',this)">😔 Lonely</button>
+    </div>
+    <div class="chat-box" id="chat-reality">
+      <div class="msg bot"><div class="sender" style="color:#ef4444">Meepro 🔥</div>Pure reality. No sugarcoating. No false comfort. What's happening?</div>
+    </div>
+    <div class="input-row">
+      <textarea id="input-reality" placeholder="Tell me everything." rows="1"></textarea>
+      <button class="send-btn reality-send" onclick="sendMessage('reality')">🔥</button>
+    </div>
+  </div>
+  <div class="panel" id="panel-challenge">
+    <div class="card">
+      <h3 class="green-title">📅 Daily Challenges</h3>
+      <div class="age-row">
+        <input type="number" id="age-input" placeholder="Age (5-100)" min="5" max="100"/>
+        <button class="btn-green" onclick="loadChallenges()">Generate ✨</button>
+      </div>
+      <div class="challenges-list" id="challenges-list">
+        <div class="empty-state"><div class="big">🌱</div>Enter your age above!</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel" id="panel-diary">
+    <div class="card">
+      <div class="diary-lock" id="diary-lock">
+        <div class="lock-icon">🔒</div>
+        <h3>Private Diary</h3>
+        <p>Your personal safe space. Set any password — only you know it.</p>
+        <input type="password" class="lock-input" id="diary-password-input" placeholder="Enter your password" autocomplete="off"/>
+        <br/>
+        <button class="btn-gold" onclick="unlockDiary()">Unlock Diary 🔓</button>
+        <p class="error-msg" id="diary-error"></p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:12px;">First time? Any password you type becomes your password. 🔐</p>
+      </div>
+      <div class="diary-content" id="diary-content">
+        <div class="diary-header">
+          <h3>📓 My Diary</h3>
+          <button class="btn-sm" onclick="lockDiary()">🔒 Lock</button>
+        </div>
+        <div class="diary-entries" id="diary-entries"></div>
+        <div class="diary-write">
+          <textarea id="diary-text" placeholder="What's on your mind today? 💛"></textarea>
+          <button class="btn-gold" onclick="saveDiaryEntry()">Save Entry 💾</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FIREBASE ── -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+         GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, collection, addDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAjbQVQRzBOydJ2oiiTWzvSGDc6LBgxuyo",
+  authDomain: "arise-6f163.firebaseapp.com",
+  projectId: "arise-6f163",
+  storageBucket: "arise-6f163.firebasestorage.app",
+  messagingSenderId: "500751792837",
+  appId: "1:500751792837:web:0f8195aafffa69269b4eac"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Save user + login log to Firestore
+async function saveLoginLog(user) {
+  try {
+    await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
+      name: user.displayName || "",
+      photoURL: user.photoURL || "",
+      lastLogin: serverTimestamp()
+    }, { merge: true });
+    await addDoc(collection(db, "loginLogs"), {
+      uid: user.uid,
+      email: user.email,
+      loginTime: serverTimestamp(),
+      method: user.providerData[0]?.providerId || "unknown"
+    });
+  } catch(e) { console.log("Log error:", e); }
+}
+
+// Show main app
+function showApp(user) {
+  document.getElementById("auth-screen").style.display = "none";
+  document.getElementById("main-app").style.display = "block";
+  const bar = document.getElementById("user-bar");
+  bar.style.display = "flex";
+  document.getElementById("user-name").textContent = user.displayName || user.email.split("@")[0];
+  const avatar = document.getElementById("user-avatar");
+  if (user.photoURL) {
+    avatar.innerHTML = `<img src="${user.photoURL}" alt="avatar"/>`;
+  } else {
+    avatar.textContent = (user.displayName || user.email)[0].toUpperCase();
+  }
+}
+
+// Watch auth state
+onAuthStateChanged(auth, (user) => {
+  if (user) showApp(user);
+  else {
+    document.getElementById("auth-screen").style.display = "flex";
+    document.getElementById("main-app").style.display = "none";
+    document.getElementById("user-bar").style.display = "none";
+  }
+});
+
+// Auth tab toggle
+window.currentAuthMode = "login";
+window.switchAuthTab = (mode, btn) => {
+  window.currentAuthMode = mode;
+  document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("auth-submit-btn").textContent = mode === "login" ? "Sign In" : "Create Account";
+  document.getElementById("auth-error").textContent = "";
+};
+
+// Email auth
+window.handleEmailAuth = async () => {
+  const email = document.getElementById("auth-email").value.trim();
+  const password = document.getElementById("auth-password").value;
+  const errorEl = document.getElementById("auth-error");
+  errorEl.textContent = "";
+  if (!email || !password) { errorEl.textContent = "Please fill in both fields."; return; }
+  try {
+    let result;
+    if (window.currentAuthMode === "login") {
+      result = await signInWithEmailAndPassword(auth, email, password);
+    } else {
+      result = await createUserWithEmailAndPassword(auth, email, password);
+    }
+    await saveLoginLog(result.user);
+  } catch(e) {
+    const msgs = {
+      "auth/user-not-found": "No account found. Register first.",
+      "auth/wrong-password": "Wrong password. Try again.",
+      "auth/email-already-in-use": "Email already registered. Sign in instead.",
+      "auth/weak-password": "Password must be at least 6 characters.",
+      "auth/invalid-email": "Invalid email address."
+    };
+    errorEl.textContent = msgs[e.code] || e.message;
+  }
+};
+
+// Google auth
+window.handleGoogleAuth = async () => {
+  const errorEl = document.getElementById("auth-error");
+  errorEl.textContent = "";
+  try {
+    const result = await signInWithPopup(auth, new GoogleAuthProvider());
+    await saveLoginLog(result.user);
+  } catch(e) {
+    errorEl.textContent = "Google sign-in failed. Try again.";
+  }
+};
+
+// Logout
+window.handleLogout = () => signOut(auth);
+</script>
+
+<!-- ── APP LOGIC (unchanged) ── -->
+<script>
+const quotes=["Every storm runs out of rain. You will too. 🌈","You are stronger than you think. 💪","Small steps every day lead to big changes. 🌱","It's okay to not be okay. Keep going. 💜","Your feelings are valid. Your healing is possible. ✨","Today is hard. Tomorrow might be better. Show up anyway. 🔥","You don't have to be perfect. Just be you. 💙","The darkest nights produce the brightest stars. ⭐","You've survived 100% of your bad days so far. 🌸","Be gentle with yourself. You're doing your best. 💗"];
+document.getElementById('quote-bar').textContent=`"${quotes[Math.floor(Math.random()*quotes.length)]}"`;
+const modePrompts={
+  sugar:"You are Meepro, a warm loving best friend inside 'Arise'. Reply in English only. Max 3 lines. Short and warm. Talk like a loving mother or best friend. Never give helpline numbers unless asked. Use 1-2 emojis. Make them feel loved and less alone.",
+  real:"You are Meepro, a wise honest best friend inside 'Arise'. Reply in English only. Max 3 lines. Like a smart older sibling — honest but never cold. Never give helpline numbers unless asked.",
+  reality:"You are Meepro, brutally honest best friend inside 'Arise'. Zero sugarcoating. Reply in English only. Max 4 lines. Like a strict teacher who truly cares. Never give helpline numbers unless asked."
+};
+const chatHistories={sugar:[],real:[],reality:[]};
+const selectedMoods={sugar:'',real:'',reality:''};
+function selectMood(mode,mood,btn){selectedMoods[mode]=mood;btn.closest('.mood-row').querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
+async function sendMessage(mode){
+  const input=document.getElementById(`input-${mode}`);
+  const chatBox=document.getElementById(`chat-${mode}`);
+  const userText=input.value.trim();
+  if(!userText)return;
+  const moodInfo=selectedMoods[mode]?` [User mood: ${selectedMoods[mode]}]`:'';
+  addMsg(chatBox,userText,'user');
+  input.value='';
+  const thinking=addMsg(chatBox,'Meepro is thinking... 💭','thinking');
+  chatHistories[mode].push({role:"user",content:userText+moodInfo});
+  try{
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:modePrompts[mode]},...chatHistories[mode]]})});
+    const data=await res.json();
+    const reply=data.reply||"I'm here for you 💜 Try again!";
+    chatHistories[mode].push({role:'assistant',content:reply});
+    thinking.remove();
+    const icons={sugar:'💗',real:'💙',reality:'🔥'};
+    const colors={sugar:'#f472b6',real:'#60a5fa',reality:'#ef4444'};
+    addBotMsg(chatBox,reply,`Meepro ${icons[mode]}`,colors[mode]);
+  }catch(e){
+    thinking.remove();
+    addBotMsg(chatBox,"Something went wrong. But I'm still here 💜","Meepro 💜","#a78bfa");
+  }
+}
+function addMsg(box,text,type){const div=document.createElement('div');div.className=`msg ${type}`;div.textContent=text;box.appendChild(div);box.scrollTop=box.scrollHeight;return div;}
+function addBotMsg(box,text,sender,color){const div=document.createElement('div');div.className='msg bot';div.innerHTML=`<div class="sender" style="color:${color||'#a78bfa'}">${sender}</div>${text}`;box.appendChild(div);box.scrollTop=box.scrollHeight;return div;}
+document.querySelectorAll('.tab-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById(`panel-${btn.dataset.tab}`).classList.add('active');});});
+['sugar','real','reality'].forEach(mode=>{document.getElementById(`input-${mode}`).addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage(mode);}});});
+async function loadChallenges(){
+  const age=parseInt(document.getElementById('age-input').value);
+  if(!age||age<5||age>100){alert("Enter age between 5 and 100!");return;}
+  const list=document.getElementById('challenges-list');
+  list.innerHTML=`<div class="empty-state"><div class="big">⏳</div>Generating...</div>`;
+  try{
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:`Generate exactly 5 age-appropriate daily challenges for a ${age}-year-old to improve mental health. Return ONLY JSON array: [{"icon":"🌅","task":"Short task"}]. No extra text.`}]})});
+    const data=await res.json();
+    const raw=(data.reply||'[]').replace(/```json|```/g,'').trim();
+    const challenges=JSON.parse(raw);
+    list.innerHTML='';
+    challenges.forEach(c=>{const item=document.createElement('div');item.className='challenge-item';item.innerHTML=`<div class="icon">${c.icon}</div><div class="text">${c.task}</div><button class="check-btn" onclick="toggleCheck(this)"></button>`;list.appendChild(item);});
+  }catch(e){list.innerHTML=`<div class="empty-state"><div class="big">😔</div>Could not load. Try again.</div>`;}
+}
+function toggleCheck(btn){btn.classList.toggle('done');btn.textContent=btn.classList.contains('done')?'✓':'';}
+let diaryPassword=null,diaryEntries=[];
+function unlockDiary(){
+  const input=document.getElementById('diary-password-input').value.trim();
+  const errorEl=document.getElementById('diary-error');
+  if(!input){errorEl.textContent="Please enter a password!";return;}
+  const savedPass=localStorage.getItem('arise_diary_pass');
+  if(!savedPass){localStorage.setItem('arise_diary_pass',input);diaryPassword=input;errorEl.textContent='';openDiary();}
+  else if(input===savedPass){diaryPassword=input;errorEl.textContent='';openDiary();}
+  else{errorEl.textContent='Wrong password! Try again. 🔐';document.getElementById('diary-password-input').value='';}
+}
+function openDiary(){document.getElementById('diary-lock').style.display='none';document.getElementById('diary-content').style.display='block';loadDiaryEntries();}
+function lockDiary(){diaryPassword=null;document.getElementById('diary-lock').style.display='block';document.getElementById('diary-content').style.display='none';document.getElementById('diary-password-input').value='';document.getElementById('diary-error').textContent='';}
+function loadDiaryEntries(){const saved=localStorage.getItem('arise_diary_entries');diaryEntries=saved?JSON.parse(saved):[];renderEntries();}
+function renderEntries(){
+  const container=document.getElementById('diary-entries');
+  if(diaryEntries.length===0){container.innerHTML=`<div class="empty-state"><div class="big">📖</div>No entries yet!</div>`;return;}
+  container.innerHTML='';
+  [...diaryEntries].reverse().forEach(entry=>{const div=document.createElement('div');div.className='diary-entry';div.innerHTML=`<div class="entry-date">📅 ${entry.date}</div><div class="entry-text">${entry.text}</div>`;container.appendChild(div);});
+}
+function saveDiaryEntry(){
+  const text=document.getElementById('diary-text').value.trim();
+  if(!text){alert("Write something first!");return;}
+  const now=new Date();
+  const date=now.toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const time=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  diaryEntries.push({date:`${date} at ${time}`,text});
+  localStorage.setItem('arise_diary_entries',JSON.stringify(diaryEntries));
+  document.getElementById('diary-text').value='';
+  renderEntries();
+}
+document.getElementById('diary-password-input').addEventListener('keydown',e=>{if(e.key==='Enter')unlockDiary();});
+</script>
+</body>
+</html>
+
 
